@@ -5,6 +5,7 @@ def KCI_API_URL = System.getenv("KCI_API_URL")
 def DOCKER_BASE = System.getenv("DOCKER_BASE")
 def CONFIG_LIST = System.getenv("CONFIG_LIST")
 def KCI_LABS_LIST = System.getenv("KCI_LABS_LIST")
+def KCI_CALLBACK_ID = System.getenv("KCI_CALLBACK_ID")
 
 pipelineJob('kernel-tree-monitor') {
   definition {
@@ -103,6 +104,7 @@ pipelineJob('kernel-build') {
     stringParam('GIT_DESCRIBE_VERBOSE', '', "Verbose output of 'git describe' at the revision of the snapshot")
     stringParam('COMMIT_ID', '', 'Git commit SHA1 at the revision of the snapshot')
     stringParam('BUILD_ENVIRONMENT', 'gcc-8', 'Name of the build environment')
+    stringParam('NODE_LABEL', '', 'Label to use to choose a node on which to run this job')
     booleanParam('PUBLISH', true, 'Publish build results via the KernelCI backend API')
     booleanParam('EMAIL', true, 'Send build results via email')
     stringParam('KCI_API_URL', KCI_API_URL, 'URL of the KernelCI back-end API.')
@@ -177,7 +179,79 @@ pipelineJob('test-runner') {
     stringParam('DOCKER_BASE', DOCKER_BASE, 'Dockerhub base address used for the build images.')
     stringParam('BUILD_JOB_NAME', 'kernelci-build', 'Name of the job that built the kernel')
     stringParam('BUILD_JOB_NUMBER', '', 'Number of the job that built the kernel')
-    stringParam('CALLBACK_ID', 'kernel-ci-callback', 'Identifier of the callback to look up an authentication token')
+    stringParam('CALLBACK_ID', KCI_CALLBACK_ID, 'Identifier of the callback to look up an authentication token')
     stringParam('CALLBACK_URL', KCI_API_URL, 'Base URL where to send the callbacks')
+  }
+}
+
+pipelineJob('rootfs-build-trigger') {
+  definition {
+    cpsScm {
+      lightweight(true)
+      scm {
+        git {
+          branch(KCI_CORE_BRANCH)
+          remote {
+            url(KCI_CORE_URL)
+          }
+        }
+      }
+      scriptPath('jenkins/rootfs-trigger.jpl')
+    }
+  }
+  configure { project ->
+    project / 'properties' / 'org.jenkinsci.plugins.workflow.job.properties.DisableResumeJobProperty' {
+      'switch'('on')
+    }
+  }
+  logRotator {
+    daysToKeep(7)
+    numToKeep(200)
+  }
+  parameters {
+    stringParam('KCI_TOKEN_ID', 'api-token', 'Identifier of the KernelCI backend API token stored in Jenkins.')
+    stringParam('KCI_API_URL', KCI_API_URL, 'URL of the KernelCI Backend API')
+    stringParam('KCI_STORAGE_URL', KCI_STORAGE_URL, 'URL of the KernelCI storage server.')
+    stringParam('KCI_CORE_URL', KCI_CORE_URL, 'URL of the kernelci-core repository.')
+    stringParam('KCI_CORE_BRANCH', KCI_CORE_BRANCH, 'Name of the branch to use in the kernelci-core repository.')
+    stringParam('DOCKER_BASE', 'kernelci/staging-', 'Dockerhub base address used for the rootfs build images.')
+    stringParam('ROOTFS_CONFIG','','Name of the rootfs configuration, all rootfs will be built by default.')
+    stringParam('ROOTFS_ARCH','','Name of the rootfs arch config, all given arch will be built by default.')
+  }
+}
+
+pipelineJob('rootfs-builder') {
+  definition {
+    cpsScm {
+      lightweight(true)
+      scm {
+        git {
+          branch(KCI_CORE_BRANCH)
+          remote {
+            url(KCI_CORE_URL)
+          }
+        }
+      }
+      scriptPath('jenkins/rootfs-builder.jpl')
+    }
+  }
+  configure { project ->
+    project / 'properties' / 'org.jenkinsci.plugins.workflow.job.properties.DisableResumeJobProperty' {
+      'switch'('on')
+    }
+  }
+  logRotator {
+    daysToKeep(7)
+    numToKeep(200)
+  }
+  parameters {
+    stringParam('KCI_TOKEN_ID', 'api-token', 'Identifier of the KernelCI backend API token stored in Jenkins.')
+    stringParam('KCI_API_URL', KCI_API_URL, 'URL of the KernelCI Backend API')
+    stringParam('KCI_STORAGE_URL', KCI_STORAGE_URL, 'URL of the KernelCI storage server.')
+    stringParam('KCI_CORE_URL', KCI_CORE_URL, 'URL of the kernelci-core repository.')
+    stringParam('KCI_CORE_BRANCH', KCI_CORE_BRANCH, 'Name of the branch to use in the kernelci-core repository.')
+    stringParam('DOCKER_BASE', 'kernelci/staging-', 'Dockerhub base address used for the rootfs build images.')
+    stringParam('ROOTFS_CONFIG','','Name of the rootfs configuration, all rootfs will be built by default.')
+    stringParam('ROOTFS_ARCH','','Name of the rootfs arch config, all given arch will be built by default.')
   }
 }
