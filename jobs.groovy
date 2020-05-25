@@ -200,13 +200,13 @@ pipelineJob('rootfs-build-trigger') {
       lightweight(true)
       scm {
         git {
-          branch(KCI_CORE_BRANCH)
+          branch(KCI_JENKINS_BRANCH)
           remote {
-            url(KCI_CORE_URL)
+            url(KCI_JENKINS_URL)
           }
         }
       }
-      scriptPath('jenkins/rootfs-trigger.jpl')
+      scriptPath('jobs/rootfs-trigger.jpl')
     }
   }
   configure { project ->
@@ -236,13 +236,13 @@ pipelineJob('rootfs-builder') {
       lightweight(true)
       scm {
         git {
-          branch(KCI_CORE_BRANCH)
+          branch(KCI_JENKINS_BRANCH)
           remote {
-            url(KCI_CORE_URL)
+            url(KCI_JENKINS_URL)
           }
         }
       }
-      scriptPath('jenkins/rootfs-builder.jpl')
+      scriptPath('jobs/rootfs-builder.jpl')
     }
   }
   configure { project ->
